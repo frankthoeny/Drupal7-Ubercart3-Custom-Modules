@@ -1,0 +1,241 @@
+<?php
+
+/**
+ *  eNEWS SIGN UP
+ * ...create the eNEWS SIGN UP form...
+ */
+
+
+
+
+/**
+ * Implements hook_node_view().
+ */
+function enews_signup_process_page(&$variables) {
+				
+	drupal_add_css(drupal_get_path('module', 'enews_signup') . '/css/enews-signups.css');
+	drupal_add_js(drupal_get_path('module', 'enews_signup') . '/js/enews-signups-ajax.js');	
+	
+	//drupal_set_message('<pre>'. print_r(&$variables,1).' </pre>');
+	//drupal_render(drupal_get_form('enews_signup_form'));
+		
+}
+
+
+/**
+ * Implements hook_menu().
+ * 
+ */
+function enews_signup_menu() {
+    $items['enews_signup'] = array(
+            'title' => 'eNEWS SIGN UP',
+            'id' => 'enews_signup_form',
+            'page callback' => 'drupal_get_form',
+            'page arguments' => array('enews_signup_form'),         
+            'access callback' => TRUE
+            );
+    return $items;
+}
+
+
+/**
+ * Implements hook_form().
+ *  
+ * ...Now create eNEWS SIGN UP form fields ...
+ */
+function enews_signup_form($form, &$form_state) {	
+	// renders array for form fields
+    
+    $form['EMAIL'] = array( 
+        '#title' => 'Email Address',
+        '#type' => 'textfield',
+        '#required' => TRUE,
+        '#id' => 'mce-EMAIL',
+        '#attributes' => array(
+			'class' => array('eNEWS-fields-input')							
+		)                        
+    );
+    
+    $form['FNAME'] = array(                            
+        '#title' => 'First Name',
+        '#type' => 'textfield',                            
+        '#id' => 'mce-FNAME',
+        '#attributes' => array(			
+			'class' => array('eNEWS-fields-input')								
+		)
+    );
+       
+    $form['LNAME'] = array(                            
+        '#title' => 'Last Name',
+        '#type' => 'textfield',
+        '#id' => 'mce-LNAME',
+        '#attributes' => array(
+			'class' => array('eNEWS-fields-input')								
+		)
+        );
+      
+    $form['submit'] = array(
+        '#value' => '>',
+        '#name'	=> 'subscribe',
+        '#type' => 'submit',
+        '#id'   => 'mce-submit',
+        '#attributes' => array(
+    		'class' => array('eNEWS-fields-submit')	
+         ),
+    	 '#ajax' => array(    	 	
+            'callback' => 'enews_signup_form_callback',
+            'wrapper' => 'mc_signup_message_box'
+        )
+    );
+    
+    $form['box'] = array(
+        '#type' => 'markup',
+        '#prefix' => '<div id="mc_signup_message_box" class="signup_message_box">',
+        '#suffix' => '</div>'
+    );
+    
+  return $form;   
+}
+
+
+/**
+ * Implements Submit handler hook_form_submit().
+ * 
+ * this function includes validation for user email
+ * with return elements.
+ */
+function enews_signup_form_callback($form, &$form_state) {
+ 		
+    // POST Info	
+    $firstname =$form_state['values']['FNAME'];
+    $lastname  = $form_state['values']['LNAME'];
+    $email = $form_state['values']['EMAIL'];    
+	
+	$element = $form['box'];   
+    
+    // API url
+    $url = 'https://us6.api.mailchimp.com/2.0/lists/subscribe';
+    
+    // set the curl options for the API call
+    $curlopt_header = false;
+    $curlopt_returnTransfer = true; 
+    $headers = array('Content-Type: application/json');
+    
+    // Info to send
+    $payload = array(
+        'apikey' => 'xxxxxxxxxxx-us6', // LSC API Key
+        'id' => 'xxxxxx', // list ID
+        'email' => array(
+            'email' => $email,      
+            'euid' => '',
+            'leid' => ''
+        )
+    );
+    
+     if($email == '') 
+	 {
+	 	// returns the default required messsage. Can be 	
+	 	return $element;
+	 }  
+	 else
+   {
+        // make the API call		
+		$curl = curl_init();
+		curl_setopt($curl, CURLOPT_URL, $url);
+		curl_setopt($curl, CURLOPT_HEADER, $curlopt_header);
+		curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
+		curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode((object)$payload));
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, $curlopt_returnTransfer);
+		$curl_result = curl_exec($curl);
+		curl_close($curl);
+		$result = json_decode($curl_result, true);		
+        
+		if($result['code'] == '214' AND $result['name'] == 'List_AlreadySubscribed')
+		{
+          //$element['#markup'] = drupal_set_message(t('Email already exists.'),'error');
+          drupal_set_message( t('Thanks, that email is already registered on our site.  <br />We appreciate your continued interest.'));
+          return $element; 
+		}
+		elseif($result['email'] != '' AND $result['euid'] != '' AND $result['leid'] != '')
+		{
+			
+		// POST Info	
+		    $firstname =$form_state['values']['FNAME'];
+		    $lastname  = $form_state['values']['LNAME'];
+		    $email = $form_state['values']['EMAIL'];    
+		  	$status = 0;
+			$affiliates = '';
+			
+			if(isset($_GET[URL_KEY]) AND !empty($_GET[URL_KEY]))
+			{
+			  	$affiliates = $_GET[URL_KEY];
+			}
+			// user has cookie already
+			else if(isset($_COOKIE[SOURCE_COOKIE]) AND !empty($_COOKIE[SOURCE_COOKIE])) 
+			{
+					
+			    $affiliates = $_COOKIE[SOURCE_COOKIE];
+				
+			}else{
+				
+				
+			}
+			/*
+			 // MYSQL DB Insertion		
+				db_insert('enews_signups')
+				        ->fields(array(			   
+				   	'enews_signup_date' => date('Y-m-d H:i:s'),
+					'enews_signup_email'=> $email,
+					'enews_signup_first_name' => $firstname,
+					'enews_signup_last_name' => $lastname,
+					'enews_signup_status' => $status,
+					'enews_signup_affiliates' => $affiliates
+				    ))->execute();
+				*/						
+			if($firstname){
+				$thankyou_text= t('Thank you, %firstname. Please check your inbox at %email  to confirm your subscription. We require this double opt-in to secure your privacy.', array('%firstname' => $firstname, '%email' => $email));		
+			}else {
+				$thankyou_text= t('Thank you. Please check your inbox at %email  to confirm your subscription. We require this double opt-in to secure your privacy.', array('%email' => $email));
+			}
+			
+			drupal_set_message( t($thankyou_text, array('%name' => $name, '%email' => $email)));
+			return $element;			
+		}
+		else {
+         form_set_error($form, t('An unknown error has occurred, please try again with a valid email address.'));		  
+         return $element; 
+         
+		}
+	}		
+}
+
+
+
+/**
+ * Implements hook_block_view().
+ */
+function enews_signup_block_view($delta = '') {
+  $block = array();
+  switch ($delta) {
+    case 'enews_signup':    
+      $block['content'] = array(        
+        '#weight' => -100
+      );    
+      break;
+  }
+  return $block;
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function enews_signup_block_info() {
+  // This example comes from node.module.
+  $blocks['enews_signup'] = array(
+    'info' => t('ENEWS: Sign up for newsletter')    
+  );
+  return $blocks;
+}
+
+
+?>

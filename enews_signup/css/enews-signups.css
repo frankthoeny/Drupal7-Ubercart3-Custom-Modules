@@ -1,0 +1,18 @@
+#header-signup .e-news-form {
+	z-index: 999;
+	zoom:1;
+}
+#enews-signup-form .form-item {
+	float:left;
+	width:150px;	
+}
+#mc_signup_message_box {
+	width: 100%;
+	padding: 0;
+}
+.signup_message_box {
+	position: absolute;
+	z-index: 99;
+	padding: 5px;
+	margin: 5px;
+}

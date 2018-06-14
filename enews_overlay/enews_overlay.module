@@ -1,0 +1,311 @@
+<?php
+
+/**
+ *  eNEWS Overlay
+ * ...create the eNews Overlay form...
+ */
+
+function enews_overlay_preprocess_page(&$variables) {
+}
+/**
+ * Implements hook_node_view().
+ */
+function enews_overlay_process_page(&$variables) {
+	if($variables['node']->nid == 6){	
+		drupal_add_css(drupal_get_path('module', 'enews_overlay') . '/css/enews-overlay.css');
+		drupal_add_js(drupal_get_path('module', 'enews_overlay') . '/js/enews-overlay-ajax.js');
+	}		
+}
+
+
+/**
+ * Implements hook_form().
+ *  
+ * ...Now create eNew overlay form fields ...
+ */
+function enews_overlay_form($form, &$form_state) {	
+	
+    // get the contents from block  to use in COPY
+	//$block = module_invoke('enews_overlay','block_view','enews_overlay');
+	
+	// build the HTML from the block content
+	$titleOutput = "<h2>News, special offers, promotions and fun!</h2>";
+	
+	$bodyOutput = "<div id=\"intro\">	
+	<p>Sign up for our eNewsletters and take advantage of special offers, promotions, contests and
+	 other exciting news. We average just two emails a month, and you can opt out at any time.  
+	 At Lifeline we respect and protect the <a href=\"#\" id=\"privacy\">privacy</a>
+	 of our customers and those who use our website.</p></div>"; 
+	
+	$privacyOutput = "<div id=\"privacyStatement\">
+	<h3>Email Privacy Statement:</h3>
+	<p>We will not share, sell, rent, swap or authorize any third party to use your e-mail address.
+	If you no longer wish to receive e-news, follow the \"unsubscribe\" instructions 
+	located near the bottom of each newsletter.</p>	
+	</div>";
+	
+	
+	$fullContentHTML = $titleOutput.$bodyOutput.$privacyOutput;
+	
+	// renders array for form fields
+    $form['COPY'] = array(
+		'#markup' => $fullContentHTML 	
+	);	
+    
+    $form['EMAIL'] = array( 
+	    '#type' => 'textfield',
+	    '#required' => TRUE,        
+	    '#id' => 'overlay-email',
+	    '#title' => 'Email Address',
+	    '#attributes' => array(			
+			'class' => array('enews-overlay-input')							
+		)                        
+    );
+    
+    $form['FNAME'] = array(                            
+	    '#type' => 'textfield',	                        
+	    '#id' => 'overlay-fname',
+	    '#title' => 'First Name',
+	    '#attributes' => array(
+			'class' => array('enews-overlay-input')								
+		)
+    );
+       
+    $form['LNAME'] = array(                            
+	    '#type' => 'textfield',
+	    '#id' => 'overlay-lname',
+	    '#title' => 'Last Name',
+	    '#attributes' => array(
+			'class' => array('enews-overlay-input')								
+		)
+    );
+    
+    $form['subscribe'] = array(
+	    '#type' => 'submit',	
+	    '#value' => 'Subscribe',
+	    '#name'	=> 'subscribe',	       
+	    '#id'   => 'overlay-submit',
+	    '#attributes' => array(
+			'class' => array('enews-overlay-input')	
+		 ),
+		'#ajax' => array(
+			'callback' => 'enews_overlay_form_callback',
+			'wrapper' => 'overlay_message_box'        
+		)
+   );
+   
+    $form['cancel'] = array(
+		'#value' => 'Cancel',
+		'#type' => 'button',
+		'#name' => 'cancel',
+		'#attributes' => array(
+			'class' => array('cancel')	
+     	)
+	);
+		
+    $form['box'] = array(
+        '#type' => 'markup',
+        '#prefix' => '<div id="overlay_message_box">',
+        '#suffix' => '</div>'
+    );
+    
+  return $form; 
+}
+
+
+/**
+ * Implements Submit handler hook_form_submit().
+ */
+function enews_overlay_form_callback($form, &$form_state) {
+   
+		
+    // POST email   
+    $firstname =$form_state['values']['FNAME'];
+	$lastname  = $form_state['values']['LNAME'];
+	$email = $form_state['values']['EMAIL'];    
+	
+	$element = $form['box'];   
+    
+    // API url
+    $url = 'https://us6.api.mailchimp.com/2.0/lists/subscribe';
+    
+    // set the curl options for the API call
+    $curlopt_header = false;
+    $curlopt_returnTransfer = true; 
+    $headers = array('Content-Type: application/json');
+    
+    // Info to send
+    $payload = array(
+        'apikey' => 'xxxxxxxxxxx-us6', // API Key
+        'id' => 'xxxxxxx', // list ID
+        'email' => array(
+            'email' => $email,            
+            'euid' => '',
+            'leid' => ''
+        )
+    );
+    
+        
+    if ($email == '') 
+    {
+          
+      //$element['#markup'] = "<div class='messages error'>Enter a valid email address.</div>";
+      // clear the message for a custom message
+      form_set_error($form['EMAIL'], t("Enter a valid email address."));      
+      return $element;
+    }
+    else {
+        // make the API call		
+		$curl = curl_init();
+		curl_setopt($curl, CURLOPT_URL, $url);
+		curl_setopt($curl, CURLOPT_HEADER, $curlopt_header);
+		curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
+		curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode((object)$payload));
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, $curlopt_returnTransfer);
+		$curl_result = curl_exec($curl);
+		curl_close($curl);
+		$result = json_decode($curl_result, true);		
+        
+		if($result['code'] == '214' AND $result['name'] == 'List_AlreadySubscribed')
+		{
+          $element['#markup'] = "<div class='messages warning'>Thanks, that email is already registered on our site.  <br />We appreciate your continued interest.</div>";
+          return $element; 
+		}
+		elseif($result['email'] != '' AND $result['euid'] != '' AND $result['leid'] != '')
+		{
+			
+		// POST Info	
+		    $firstname =$form_state['values']['FNAME'];
+		    $lastname  = $form_state['values']['LNAME'];
+		    $email = $form_state['values']['EMAIL'];    
+			$status = 0;
+			$affiliates = '';
+		
+		// Create connection
+		$con = mysqli_connect('localhost', 'lifeli33_prod', 'P;1gzz(z&p0h', 'lifeli33_prod')or die("cannot connect");
+		if (mysqli_connect_errno()) {
+			echo 'Failed to connect to MySQL: ' . mysqli_connect_error();
+		}
+
+		mysqli_query($con,"	INSERT INTO m_enews_signups
+							VALUES(	
+								'',
+								now(),
+								'" . $email . "',
+								'" . $firstname . "',
+								'" . $lastname . "',
+								'" . $status . "',
+								'" . $affiliates . "'
+							)"); 
+		 
+		 /* // MYSQL DB Insertion		
+			db_insert('enews_signups')
+			        ->fields(array(			   
+			   	'enews_signup_date' => date('Y-m-d H:i:s'),
+				'enews_signup_email'=> $email,
+				'enews_signup_first_name' => $firstname,
+				'enews_signup_last_name' => $lastname,
+				'enews_signup_status' => $status,
+				'enews_signup_affiliates' => $affiliates
+			  ))->execute(); */
+						
+			
+			if($firstname){
+				$thankyou_text= t('Thank you, %firstname. Please check your inbox at %email  to confirm your subscription. We require this double opt-in to secure your privacy.', array('%firstname' => $firstname, '%email' => $email));		
+			}else {
+				$thankyou_text= t('Thank you. Please check your inbox at %email  to confirm your subscription. We require this double opt-in to secure your privacy.', array('%email' => $email));
+			}
+
+			$element['#markup'] = "<div class='messages status'>".$thankyou_text."</div>";
+			return $element;
+			
+		}
+		else {
+          $element['#markup'] = "<div class='messages error'>An unknown error has occurred, please try again with a valid email address.</div>";
+          return $element; 
+		}	
+	}
+}
+
+/**
+ * Implements hook_block_configure().
+ *
+ *
+ */
+function enews_overlay_block_configure($delta = '') {
+	$form = array();
+	if ($delta == 'enews_overlay') {
+			
+		$form['enews_overlay'] = array(
+		  '#type' => 'fieldset',
+		  '#title' => t('Overlay Options'),		  
+		);
+		
+	    $form['enews_overlay']['enews_overlay_block_content'] = array(
+	      '#type' => 'textarea',
+	      '#title' => t('Body'),
+	      '#default_value' => variable_get('enews_overlay_block_content'),      
+	    );
+		
+		$form['enews_overlay']['enews_overlay_block_privacy'] = array(
+	      '#type' => 'textarea',
+	      '#title' => t('Privacy Statement'),
+	      '#default_value' => variable_get('enews_overlay_block_privacy'),	      
+	    );
+  }
+  return $form;
+}
+
+/**
+ * Implements hook_block_save().
+ *
+ *
+ */
+function enews_overlay_block_save($delta = '', $edit = array()) {
+  if ($delta == 'enews_overlay') {
+    variable_set('title', $edit['title']);	  	
+    variable_set('enews_overlay_block_content', $edit['enews_overlay_block_content']);
+    variable_set('enews_overlay_block_privacy', $edit['enews_overlay_block_privacy']);		  
+  }
+}
+
+/**
+ * Implements hook_block_info().
+ *
+ *
+ */
+function enews_overlay_block_info() {
+  // This example comes from node.module.
+  $blocks['enews_overlay'] = array(
+    
+    'info' => t('ENEWS: Overlay Content')
+	    
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ *
+ *
+ */
+function enews_overlay_block_view($delta = '') {	 	
+	 $block = array();
+	 $delta = 'enews_overlay';
+	 switch ($delta) {
+	 	
+	 	case 'enews_overlay':
+		$block['title'] = variable_get('title');
+		$block['content'] = variable_get('enews_overlay_block_content');
+		$block['privacy'] = variable_get('enews_overlay_block_privacy');
+		
+      break;  
+  }
+	 
+  return $block;
+}
+
+
+
+
+?>

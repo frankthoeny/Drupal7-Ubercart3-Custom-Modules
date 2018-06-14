@@ -1,0 +1,5 @@
+name = eNews Sign Up
+description = Provides MailChimp and Newsletter Subscription Integration.
+
+core = 7.x
+package = Lifeline Skincare - eNews Sign Up

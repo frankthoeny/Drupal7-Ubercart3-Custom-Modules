@@ -1,0 +1,35 @@
+#enews_overlay_wrapper {
+	display:none;
+	width: 480px;	
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 13px;
+	background-color:#e5fbff;  			
+}
+#enews_overlay_wrapper h2 {
+	margin-top:2px;
+	font-size: 28px;
+	color: #28ced7;
+	font-family: 'NewsCycleRegular';
+	line-height: 26px;
+}
+#edit-cancel, 
+#overlay-submit{
+	margin-bottom:0.5em;
+}
+
+#overlay_message_box {
+    width: 420px;
+    padding: 0 10px;     
+}
+
+.perfection {
+	color: #004040;
+}
+
+#privacyStatement {	
+	width: 450px;
+    padding: 0 10px 10px;
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 13px;	
+	background-color: #e5fbff;
+}
