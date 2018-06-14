@@ -1,0 +1,32 @@
+<?php
+
+/**
+ * Implements hook_uc_cart_alter().
+ *
+ */
+function hallmark_20_uc_cart_alter(&$items) {
+  		
+  	// ...add Hallmark coupons to the cart automatically 
+  	
+  	// ...For Deluxe Mini Collection - Commission Junction  
+	$add_this_coupon_for_deluxe_mini_collection_cj = 'hallmark20';	
+	if (variable_get('uc_coupon_show_in_cart', TRUE) && !empty($add_this_coupon_for_deluxe_mini_collection_cj)) 
+	{       
+		uc_coupon_session_add($add_this_coupon_for_deluxe_mini_collection_cj, 'retain');
+	}
+  	
+  	
+  	// ...For Deluxe Mini Collection  - LSC 
+	$add_this_coupon_for_deluxe_mini_collection = 'HALLMARK';  
+	if (variable_get('uc_coupon_show_in_cart', TRUE) && !empty($add_this_coupon_for_deluxe_mini_collection)) 
+	{       
+		//uc_coupon_session_add($add_this_coupon_for_deluxe_mini_collection, 'retain');
+	}
+	
+
+	if ($_SERVER['REMOTE_ADDR'] != "64.87.19.250") {	
+		
+	}
+}
+
+?>

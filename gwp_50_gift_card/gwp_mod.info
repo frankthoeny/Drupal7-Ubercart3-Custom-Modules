@@ -1,0 +1,5 @@
+name = GWP (Gift With Purchase) $50 Gift Card
+description = Add a gift with purchase to the cart
+
+core = 7.x
+package = Lifeline Skincare - GWP(Gift With Purchase)

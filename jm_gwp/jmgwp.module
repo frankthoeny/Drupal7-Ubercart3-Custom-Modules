@@ -1,0 +1,120 @@
+<?php
+
+/**
+ * Implements hook_page_build().
+ *
+ */
+function jmgwp_page_build(&$page) {
+		
+	// user comes from an email link
+	
+	if($_GET['coupon'] == 'JMEXFOLIATE' AND !empty($_GET['coupon'])) 
+	{
+		setcookie('coupon', $_GET['coupon'], time()+3600, '/');	
+	}
+				
+	if(arg(0) == 'cart' AND isset($_COOKIE['coupon']))
+	{
+			
+		$products = uc_cart_get_contents();	
+		$product_count = count($products);				
+			
+		// --- add one exfoliator to each order		
+		$gwp_nid = 441;
+		$has_gwp = FALSE;
+		
+		$eligible_nid = 23;			
+		$eligible_products_qty = 0;
+				
+		// loop through the cart products
+		foreach($products as $pid => $product)
+		{
+			// if gwp is found ...
+			if($product->nid == $gwp_nid)
+			{
+				$gwp_qty += $product->qty;
+				
+				// set the flag true
+				$has_gwp = TRUE;
+			}
+			
+			if($product->nid == $eligible_nid)
+			{
+				$eligible_products_qty += $product->qty;
+			}			
+		}
+				
+		// if there is no gwp in the cart ...
+		if(!$has_gwp AND $product_count > 0 AND $eligible_products_qty > 0)
+		{
+			// ... add the gwp
+			uc_cart_add_item($gwp_nid, 1);						
+			
+			// refresh the cart
+			header("Location: " . $_SERVER['REQUEST_URI']);	     
+		}	
+		
+		// if there is only one product in the cart and it is the gwp ...
+		if($product_count == 1 AND $has_gwp)
+		{
+			// ... empty the cart
+			uc_cart_empty(uc_cart_get_id());
+			$has_gwp = FALSE;
+			
+			// refresh the cart
+			header("Location: " . $_SERVER['REQUEST_URI']);	
+		}		
+		// --- add one exfoliator to each order - EOF	
+		
+		if($eligible_products_qty == 0) {
+			// if the cookie exsists then remove it when customer gets to cart.
+			if(isset($_COOKIE['coupon'])) {
+			  unset($_COOKIE['coupon']);
+			  setcookie('coupon', '', time() - 3600); // empty value and old timestamp
+			}
+		}
+				
+		
+		// if no eligible products, remove all gwp
+			if($eligible_products_qty < 1 AND $gwp_qty > 0)
+			{		    								
+				drupal_set_message('remove all gwp');
+						
+				db_delete('uc_cart_products')			 		
+							->condition('nid', $gwp_nid)
+							->execute();
+				header("Location: " . $_SERVER['REQUEST_URI']);		
+			}
+			// --- add one GWP for each item - EOF		
+		
+	}			
+			
+	//drupal_set_message('<pre>'.print_r($_COOKIE,1).'</pre>', 'error');	
+}
+
+/**
+ * Implemenets hook_page_alter().
+ *
+ */
+function jmgwp_page_alter(&$page) {  		
+  
+  	
+  if (arg(0) == 'cart'  ) 
+  {
+		
+	// disable the input fields  	
+	$gwp_nid = 441;	
+	  //drupal_set_message('<pre>'.print_r($page['content']['system_main']['cart_form']['items'],1).'</pre>', 'error');
+	  foreach ($page['content']['system_main']['cart_form']['items'] as $key => $item) 
+	  {		
+			 	
+		// --- disable input field		      
+		  if (is_int($key) && intval($item['nid']['#value']) == $gwp_nid AND $page['content']['system_main']['cart_form']['items'][$key]['description']['#markup']=='') 
+		  {
+	        //drupal_set_message('<pre>'.print_r($page['content']['system_main']['cart_form']['items'][$key],1).'</pre>', 'error');	        
+	        $page['content']['system_main']['cart_form']['items'][$key]['qty']['#attributes']['disabled'] = 'disabled';
+	      }
+	    }// disable the input fields	- EOF
+  	}
+  
+}

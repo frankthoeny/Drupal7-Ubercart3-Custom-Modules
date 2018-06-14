@@ -1,0 +1,116 @@
+<?php
+/**
+ * Implements hook_page_build().
+ */
+function gwp_2pk_eye_page_build(&$page) {
+
+	if (arg(0) == 'cart')
+	{	
+						
+		// gwp product variables
+		$gwp_eye_nid = 150; // eye firming complex		
+		$gwp_eye_qty = 0;		
+		$eligible_products_nid = 574; // Lifeline Daily/Night Moisture Serum 2 Pack
+		$eligible_products_qty = 0;			
+		$total_qty = 0;
+		$gwp_stock = 1;
+		
+		// get cart contents
+		$products = uc_cart_get_contents();		
+		$product_count = count($products);
+		
+		 // loop through the cart products
+		foreach($products AS $pid => $product)
+		{
+			
+			// count gwp - eye
+			if ($product->nid == $gwp_eye_nid)
+			{
+				$gwp_eye_qty = $product->qty;
+			}			
+			
+			// count eligible product
+			if($product->nid != $gwp_eye_nid && $product->nid == $eligible_products_nid)
+			{	
+				$eligible_products_qty += $product->qty;
+			}		
+			
+			// total qty of all products in the cart
+			$total_qty += $product->qty;
+						
+		} 
+	
+		// ... For 2pack get an Eye Free
+		$add_this_coupon = '2PACKEYE';	
+		if (variable_get('uc_coupon_show_in_cart', TRUE) && !empty($add_this_coupon)) 
+		{
+			uc_coupon_session_add($add_this_coupon, 'retain');
+		}
+		
+		// ...is gwp created before hand, also get the stock level.		
+		if(is_numeric($gwp_eye_nid))
+		{
+			$is_gwp_created = uc_product_is_product(intval($gwp_eye_nid));
+			//$gwp_stock = uc_stock_level(uc_product_get_models($gwp_eye_nid, FALSE));
+			//drupal_set_message('GWP STOCK LEVEL: '. $gwp_stock);
+		}
+		
+		// check on gwp stock level and gwp created, before adding to cart.
+		if( $is_gwp_created == TRUE && $gwp_stock > 0)
+		{
+				
+			// add gwp to cart on cart update		
+			if($gwp_eye_qty < $eligible_products_qty )
+			{
+				$gwp_add = ($eligible_products_qty - $gwp_eye_qty);
+				drupal_set_message('add gwp ' . $gwp_eye_nid . ' on cart update: ' . ($gwp_add + $gwp_eye_qty));
+	
+				// if gwp == 0, we need to insert a gwp record, otherwise we are re stuck in a loop because there is record to update
+				if($gwp_eye_qty < 1)
+				{
+					//drupal_set_message('add one gwp ' . $gwp_eye_nid);
+					uc_cart_add_item($gwp_eye_nid, 1);
+				}
+				// if there is at least one gwp, we update its quantity
+				else
+				{
+					
+						//drupal_set_message('update gwp qty');
+						db_update('uc_cart_products')			 		
+								->fields(array(				      	      
+								'qty' => ($gwp_add + $gwp_eye_qty)
+								))
+								->condition('nid', $gwp_eye_nid)			      
+								->execute();
+					}
+					
+				header("Location: " . $_SERVER['REQUEST_URI']);	
+						
+			}
+			// --- add one GWP for each item - EOF		
+		}
+	}	
+}	
+
+/**
+ * Implements hook_uc_cart_alter().
+ *
+ */
+function gwp_2pk_eye_uc_cart_alter(&$items) {
+  	
+  	//drupal_set_message('<pre>'.print_r($items,1).'</pre>');
+	// loop through the items in the cart to get autoship items
+	foreach($items as $index => $item) {		
+		if($item->nid == 150 && $item->nid == 574)
+		{
+			// ... For 2pack get an Eye Free
+			$add_this_coupon = '2PACKEYE';	
+			if (variable_get('uc_coupon_show_in_cart', TRUE) && !empty($add_this_coupon)) 
+			{
+				uc_coupon_session_add($add_this_coupon, 'retain');
+			}
+		}	  
+	}
+}
+
+?>

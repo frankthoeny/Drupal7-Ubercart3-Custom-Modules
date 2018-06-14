@@ -1,0 +1,137 @@
+<?php
+
+
+/**
+ * Implements hook_page_build().
+ *
+ */
+function gwp_mod_page_build(&$page) {
+		
+		if(arg(0) == 'cart') {
+ 
+ //if($_SERVER['REMOTE_ADDR'] == '64.87.19.250'){}
+ 
+
+					
+		// gwp product variables
+		$gwp_nid = 329; // $50 Gift Card		
+		$gwp_qty = 0;
+		$eligible_products_qty = 0;		
+		$total_qty = 0;		
+		$eligible_price = 0;
+		//$gwp_stock = 1;
+		
+		$products = uc_cart_get_contents();	
+		$product_count = count($products);	
+		
+		// loop through the cart products
+		foreach($products AS $pid => $product)
+		{
+			// count gwp
+			if ($product->nid == $gwp_nid){
+				$gwp_qty = $product->qty;
+			}			
+			
+			// count eligible product
+			if($product->nid != $gwp_nid){	
+				$eligible_products_qty = $product->qty;				
+				$eligible_price += ($product->qty * $product->price);				
+			}
+			
+			// total qty of all products in the cart
+			$total_qty = $product->qty;						
+		}
+				 
+		// ...is gwp created before hand, also get the stock level.		
+		if(is_numeric($gwp_nid))
+		{
+			$is_gwp_created = uc_product_is_product(intval($gwp_nid));
+			$gwp_stock = uc_stock_level(uc_product_get_models($gwp_nid, FALSE));
+			//drupal_set_message('GWP STOCK LEVEL: '. $gwp_stock);
+		}
+		
+		// if the cart contains no eligible products then empty the cart
+		if($eligible_products_qty == 0 AND $gwp_qty == 1){
+				uc_cart_empty(uc_cart_get_id());		
+				uc_cart_get_contents(uc_cart_get_id(), 'empty');
+				
+				header("Location: " . $_SERVER['REQUEST_URI']);
+		}
+		
+		
+		// check on gwp stock level and gwp created, before adding to cart.
+		if($is_gwp_created == TRUE && $gwp_stock > 0 && $eligible_products_qty > 0 && $gwp_qty == 0 && $eligible_price >= 190){
+			uc_cart_add_item($gwp_nid, 1);
+			uc_cart_get_contents(NULL, 'rebuild');
+				
+			// Once the uc_cart_add_item is done then set a custom message to the cart for a $50 Gift Card.
+			$messages = drupal_get_messages('status');						 
+			foreach($messages['status'] as $item){
+				// compare HTML in the message. 
+				if($item != '<strong>$50 Gift Card</strong> added to <a href="/cart">your shopping cart</a>.'){
+					drupal_set_message($item);
+				} else {
+					drupal_set_message(t('When you spend <strong>$190</strong> a <strong>$50 Gift Card</strong> is added to <a href="/cart">your shopping cart</a>.'),'status');
+				}
+			}				
+			header("Location: " . $_SERVER['REQUEST_URI']);
+		}
+		
+		// if more gwp than ONE
+		if($gwp_qty > 1)
+		{			
+			$gwp_left = 1;	
+			
+			//drupal_set_message('remove extra gwp');
+					
+			// remove the extra gwp
+			db_update('uc_cart_products')			 		
+						->fields(array('qty' => $gwp_left))
+						->condition('nid', $gwp_nid)			      
+						->execute();
+			header("Location: " . $_SERVER['REQUEST_URI']);
+		}
+				
+		// if no eligible products, remove all gwp
+		if($eligible_products_qty == 0 && $gwp_qty > 0 && $eligible_price < 190 )
+		{
+			
+			db_delete('uc_cart_products')			 		
+						->condition('nid', $gwp_nid)
+						->execute();
+			header("Location: " . $_SERVER['REQUEST_URI']);			
+		}	
+		
+		// --- add one GWP - EOF
+	}
+}
+
+/**
+ * Implemenets hook_page_alter().
+ *
+ */
+function gwp_mod_page_alter(&$page) {  		
+  
+  // disable the input fields	
+  if (arg(0) == 'cart'  ) 
+  {
+	  	
+	$gwp_nid = 329;	 
+	  
+	  foreach ($page['content']['system_main']['cart_form']['items'] as $key => $item) 
+	  { 	
+		// --- disable input field		      
+		  if (is_int($key) && intval($item['nid']['#value']) == $gwp_nid) 
+		  {
+	        $page['content']['system_main']['cart_form']['items'][$key]['qty']['#attributes']['disabled'] = 'disabled';
+	      }
+	    }
+  	} 
+  	// disable the input fields	- EOF
+}
+
+
+
+
+
+

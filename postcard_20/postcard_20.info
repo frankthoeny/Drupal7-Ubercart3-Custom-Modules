@@ -1,0 +1,5 @@
+name = 20% OFF Postcard
+description = Add a postcard with order to the cart
+
+core = 7.x
+package = Lifeline Skincare - GWP(Gift With Purchase)

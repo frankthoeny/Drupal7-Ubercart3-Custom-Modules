@@ -1,0 +1,108 @@
+<?php
+
+/**
+ * Implemenets hook_page_alter().
+ *
+ * Adds JS file for checkout process
+ */
+function mini_gwp_page_alter(&$page) {
+    
+  
+	if (arg(0) == 'cart' AND arg(1) != 'checkout') 
+	{
+	  	
+	$gwp_mini_nid = 448;
+	$products = uc_cart_get_contents();	
+	$product_count = count($products);
+	if(!empty($product_count))
+	{	 
+		  
+		  foreach ($page['content']['system_main']['cart_form']['items'] as $key => $item) 
+		  { 	
+			      
+			  if (is_int($key) && intval($item['nid']['#value']) == $gwp_mini_nid) 
+			  {
+		        	$page['content']['system_main']['cart_form']['items'][$key]['qty']['#attributes']['disabled'] = 'disabled';
+				$page['content']['system_main']['cart_form']['items'][$key]['title']['#markup'] = 'Recovery Night Moisture Serum 10ml Deluxe Sample';
+				$page['content']['system_main']['cart_form']['items'][$key]['desc']['#markup'] = '<span style="font-size: 14px;">Recovery Night Moisture Serum 10ml Deluxe Sample</span>';
+				$page['content']['system_main']['cart_form']['items'][$key]['image']['#path']['path'] = 'cart';
+				$page['content']['system_main']['cart_form']['items'][$key]['#weight'] = 10000;				
+				//drupal_set_message('<pre>'.print_r($page['content']['system_main']['cart_form']['items'][$key],1).'</pre>');
+		      }
+			  
+		  }
+		  
+	  }
+	 if(arg(1) == 'checkout')
+	 {
+	 	
+	 }
+	  	
+	}
+
+}	
+
+/**
+ * Implements hook_uc_cart_alter().
+ *
+ */
+function mini_gwp_uc_cart_alter(&$items) {
+  	
+	$products = uc_cart_get_contents();	
+	$product_count = count($products);
+	$gwp_nid = 448; // ... add the cart
+	$bogocj_nid = 22; // not eligible for free mini deluxe
+	$travel_kit_nid = 445;
+	$bogocj_qty = 0;
+	$travel_kit_qty = 0;
+	$gwp_qty = 0;
+	$eligible_products_qty = 0;
+	
+			
+	// loop through the cart products
+	foreach($products AS $pid => $product)
+	{	
+		// count eligible product
+		if($product->nid != $gwp_nid AND $product->nid != $bogocj_nid AND $product->nid != $travel_kit_nid)
+		{	
+			$eligible_products_qty += $product->qty;
+		}			
+		// count gwp - mini	
+		if ($product->nid == $gwp_nid)
+		{
+			$gwp_qty += $product->qty;			
+		}
+		// count bogocj
+		if($product->nid == $bogocj_nid)
+		{
+			$bogocj_qty += $product->qty;
+		}
+		// count travel kit
+		if($product->nid == $travel_kit_nid)
+		{
+			$travel_kit_qty += $product->qty;
+		}
+	}
+	
+	if($eligible_products_qty == 0 AND $gwp_qty == 1)
+	{
+		if($bogocj_qty != 0 OR $travel_kit_qty != 0){
+			$cid = uc_cart_get_id();
+			uc_cart_remove_item($gwp_nid,$cid);
+		}else {		
+			uc_cart_empty(uc_cart_get_id());		
+			uc_cart_get_contents(uc_cart_get_id(), 'empty');
+		}	
+	}
+	
+	if($eligible_products_qty > 0 AND $gwp_qty == 0)
+	{
+		
+		$data = array('#weight'=>10000,'#markup' => array('desc'=>'Recovery Night Moisture Serum 10ml Deluxe Sample'));	
+		uc_cart_add_item($gwp_nid, 1,$data);	
+		uc_cart_get_contents(NULL, 'rebuild');	
+							
+	}
+	
+	
+} 

@@ -1,0 +1,5 @@
+name = John Mauldin GWP (Gift With Purchase)
+description = Add a free Exfoliator gift with purchase to the cart
+
+core = 7.x
+package = Lifeline Skincare - GWP(Gift With Purchase)

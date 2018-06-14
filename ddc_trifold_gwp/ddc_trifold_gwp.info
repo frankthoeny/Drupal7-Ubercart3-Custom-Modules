@@ -1,0 +1,5 @@
+name = Daily Defense Complex Sample Trifold GWP (Gift With Purchase)
+description = Add ONE ddc trifold gift with purchase per Order
+
+core = 7.x
+package = Lifeline Skincare - GWP(Gift With Purchase)

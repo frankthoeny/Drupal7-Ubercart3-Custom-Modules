@@ -1,0 +1,98 @@
+<?php
+
+
+/**
+ * Implemenets hook_page_alter().
+ *
+ * Adds JS file for checkout process
+ */
+function ddc_trifold_gwp_page_alter(&$page) {
+    
+  
+	if (arg(0) == 'cart' AND arg(1) != 'checkout') 
+	{
+	  	
+	$gwp_ddc_trifold_nid = 617;
+	$products = uc_cart_get_contents();	
+	$product_count = count($products);
+	if(!empty($product_count))
+	{	 
+		  foreach ($page['content']['system_main']['cart_form']['items'] as $key => $item) 
+		  { 	
+			      
+			  if (is_int($key) && intval($item['nid']['#value']) == $gwp_ddc_trifold_nid) 
+			  {
+		        $page['content']['system_main']['cart_form']['items'][$key]['qty']['#attributes']['disabled'] = 'disabled';
+				$page['content']['system_main']['cart_form']['items'][$key]['title']['#markup'] = 'Daily Defense Complex Sample Trifold';
+				$page['content']['system_main']['cart_form']['items'][$key]['desc']['#markup'] = '<span style="font-size: 14px;">Daily Defense Complex Sample Trifold</span>';
+				$page['content']['system_main']['cart_form']['items'][$key]['image']['#path']['path'] = 'cart';
+				$page['content']['system_main']['cart_form']['items'][$key]['#weight'] = 10000;				
+				//drupal_set_message('<pre>'.print_r($page['content']['system_main']['cart_form']['items'][$key],1).'</pre>');
+		      }
+			  
+		  }
+		  
+	  }
+		  	
+	}
+
+}	
+
+/**
+ * Implements hook_uc_cart_alter().
+ *
+ */
+function ddc_trifold_gwp_uc_cart_alter(&$items) {
+  	
+	$products = uc_cart_get_contents();	
+	$product_count = count($products);
+	$gwp_nid = 617; // ... add the cart	
+	$gwp_qty = 0;
+	$eligible_products_qty = 0;
+	
+			
+	// loop through the cart products
+	foreach($products AS $pid => $product)
+	{	
+		// count eligible product
+		if($product->nid != $gwp_nid && $product->nid !=462 )
+		{	
+			$eligible_products_qty = $product->qty;
+		}			
+		// count gwp - mini	
+		if ($product->nid == $gwp_nid)
+		{
+			$gwp_qty = $product->qty;			
+		}
+		
+	}
+	
+	if($eligible_products_qty == 0 AND $gwp_qty == 1)
+	{
+			uc_cart_empty(uc_cart_get_id());		
+			uc_cart_get_contents(uc_cart_get_id(), 'empty');	
+	}
+	
+	if($eligible_products_qty > 0 AND $gwp_qty == 0)
+	{
+		uc_cart_add_item($gwp_nid, 1);	
+		uc_cart_get_contents(NULL, 'rebuild');	
+							
+	}
+	
+	// if no eligible products, remove all gwp
+	if($eligible_products_qty < 1 AND $gwp_qty > 0)
+	{
+				    								
+		db_delete('uc_cart_products')			 		
+					->condition('nid', $gwp_nid)
+					->execute();
+		header("Location: " . $_SERVER['REQUEST_URI']);		
+	}
+	
+	// if the person trys to cheat the system. remove all
+	if($gwp_qty > 1) {
+		drupal_set_message('Illegal Operation!','error');	
+		uc_cart_empty(uc_cart_get_id());
+	}
+} 

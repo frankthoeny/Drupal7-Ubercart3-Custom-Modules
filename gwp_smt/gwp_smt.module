@@ -1,0 +1,152 @@
+<?php
+/*
+ * Satellite Media Tour 15% OFF
+ */
+ 
+  
+if ($_SERVER['REMOTE_ADDR'] != "64.87.19.250") {}
+
+/**
+ * Implements hook_uc_cart_alter().
+ *
+ */
+function gwp_smt_uc_cart_alter(&$items) {
+  		
+  	// ...add Satellite Media Tour coupon and free gifts 
+	
+	// ...add a Free Night Mini
+	$products = uc_cart_get_contents();	
+	$product_count = count($products);
+	$gwp_nid = 448; // ... add the cart	
+	$DDC_gwp_nid = 601; // not eligible
+	$deluxe_mini_collection_nid = 445; // not eligible
+	$CJ_deluxe_mini_collection_nid = 598; // not eligible
+	$gwp_qty = 0;
+	$eligible_products_qty = 0;	
+	$autoship_flag = 0;
+			
+	// loop through the cart products
+	foreach($products AS $pid => $product)
+	{	
+		// count eligible product
+		if($product->nid != $gwp_nid AND $product->nid != $DDC_gwp_nid AND $product->nid != $deluxe_mini_collection_nid AND $product->nid != $CJ_deluxe_mini_collection_nid)
+		{	
+			$eligible_products_qty = $product->qty;
+		}			
+		// count gwp - mini	
+		if ($product->nid == $gwp_nid)
+		{
+			$gwp_qty = $product->qty;			
+		}
+		
+	}
+	
+	// loop through the items in the cart to get autoship items
+	foreach($items as $index => $item) {		
+		if($item->data['attributes']['1'] > 1)
+		{
+			$autoship_flag = 1; // meeans that there is an autoship sku in the cart
+		}	  
+    }
+	
+	// add the coupon if there are $eligible products AND $autoship_flag == 0
+	if($eligible_products_qty > 0 )
+	{
+		// ...For All Full Size Products   
+		$add_this_coupon = 'STEMCELL';  
+		if (variable_get('uc_coupon_show_in_cart', TRUE) && !empty($add_this_coupon)) 
+		{       
+			uc_coupon_session_add($add_this_coupon, 'retain');			
+		}
+	}
+		
+	if($eligible_products_qty > 0 AND $autoship_flag == 1)
+	{
+		// ...For clear coupon and autoship   
+		$clear_this_coupon = 'STEMCELL';  
+		if (variable_get('uc_coupon_show_in_cart', TRUE) && !empty($clear_this_coupon)) 
+		{       
+			uc_coupon_session_clear($add_this_coupon);			
+		}
+	}
+	
+	// if the cart contains no eligible products then empty the cart
+	if($eligible_products_qty == 0 AND $gwp_qty == 1 )
+	{
+			uc_cart_empty(uc_cart_get_id());		
+			uc_cart_get_contents(uc_cart_get_id(), 'empty');	
+	}
+	
+	// add gwp to the cart
+	if($eligible_products_qty > 0 AND $gwp_qty == 0)
+	{
+		uc_cart_add_item($gwp_nid, 1);	
+		uc_cart_get_contents(NULL, 'rebuild');							
+	}
+	
+	// if no eligible products, remove all gwp
+	if($eligible_products_qty < 1 AND $gwp_qty > 0)
+	{
+		db_delete('uc_cart_products')			 		
+					->condition('nid', $gwp_nid)
+					->execute();
+		header("Location: " . $_SERVER['REQUEST_URI']);		
+	}
+	
+	// if the person trys to cheat the system. remove all
+	if($gwp_qty > 1) {
+		drupal_set_message('Illegal Operation!','error');	
+		uc_cart_empty(uc_cart_get_id());
+	}
+	
+}
+
+/**
+ * Implemenets hook_page_alter().
+ *
+ * Adds JS file for checkout process
+ */
+function gwp_smt_page_alter(&$page) {
+    
+  
+	if (arg(0) == 'cart' AND arg(1) != 'checkout') 
+	{
+	  	
+	$gwp_ddc_trifold_nid = 448;
+	$products = uc_cart_get_contents();	
+	$product_count = count($products);
+	if(!empty($product_count))
+	{	 
+		  
+		  foreach ($page['content']['system_main']['cart_form']['items'] as $key => $item) 
+		  { 	
+			      
+			  if (is_int($key) && intval($item['nid']['#value']) == $gwp_ddc_trifold_nid) 
+			  {
+		        $page['content']['system_main']['cart_form']['items'][$key]['qty']['#attributes']['disabled'] = 'disabled';
+				$page['content']['system_main']['cart_form']['items'][$key]['image']['#path']['path'] = 'cart';				
+				//drupal_set_message('<pre>'.print_r($page['content']['system_main']['cart_form']['items'][$key],1).'</pre>');
+		      }
+			  
+		  }
+		  
+	  }
+	 if(arg(1) == 'checkout')
+	 {
+	 	
+	 }
+	  	
+	}
+
+}
+
+/**
+ * Implements hook_node_view().
+ */
+function gwp_smt_node_view($node, $view_mode, $langcode) {
+	
+	//drupal_set_message('<pre>'.print_r($node->attributes,1).'</pre>');
+
+}	
+
+?>

@@ -1,0 +1,5 @@
+name = Hallmark 20% Off Deluxe Mini Collection
+description = Add an automatic 20% OFF Coupon Code to the Product
+
+core = 7.x
+package = Lifeline Skincare - GWP(Gift With Purchase)
